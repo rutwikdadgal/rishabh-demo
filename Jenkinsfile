@@ -1,30 +1,40 @@
 pipeline {
-    agent any 
+    agent {
+        label 'Jenkins-slave'
+    } 
+    
     environment {
-    DOCKERHUB_CREDENTIALS = credentials('docker-hub-passwd')
+        ACR_SERVER = 'docker123456789.azurecr.io'
+        ACR_USERNAME = credentials('ACR')
+        ACR_PASSWORD = credentials('ACR')
     }
+    
     stages { 
-        
-         stage('Code checkout') {
+        stage('Code checkout') {
             steps {  
                 git 'https://github.com/rutwikdadgal/TS-demo.git'
             }
         }
+        
         stage('Build docker image') {
             steps {  
-                sh 'docker build -t rutwikd/nginx:$BUILD_NUMBER .'
+                sh "docker build -t $ACR_SERVER/nginx:$BUILD_NUMBER ."
             }
         }
-        stage('login to dockerhub') {
-            steps{
-                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+        stage('Login to ACR and push image') {
+            environment {
+                DOCKER_CLI_HOME = "${workspace}"
             }
-        }
-        stage('push image') {
-            steps{
-                sh 'docker push rutwikd/nginx:$BUILD_NUMBER'
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'ACR', usernameVariable: 'ACR_USERNAME', passwordVariable: 'ACR_PASSWORD')]) {
+                        sh """
+                            echo \${ACR_PASSWORD} | docker login -u \${ACR_USERNAME} --password-stdin \${ACR_SERVER}
+                            docker push ${ACR_SERVER}/nginx:${BUILD_NUMBER}
+                        """
+                    }
+                }
             }
         }
     }
-
 }
