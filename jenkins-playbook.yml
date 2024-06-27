@@ -1,12 +1,21 @@
-- name: package installation
-  hosts: Jenkins-slave
-  become: true
-
+- hosts: Jenkins-slave
+  become: true  
+  
   roles:
-    - Jenkins-slave
+    - role: Jenkins-slave
 
   tasks:
     - name: Ensure Docker service is restarted
       service:
         name: docker
         state: restarted
+
+    - name: Add jenkins and azureuser to docker group
+      user:
+        name: "{{ item }}"
+        groups: docker
+        append: yes
+      become_method: sudo
+      loop:
+        - jenkins
+        - azureuser
